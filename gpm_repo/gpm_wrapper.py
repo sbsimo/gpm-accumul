@@ -1,18 +1,23 @@
 import os
+import datetime
 
 import h5py
 
 
 class GPMImergeWrapper:
     """A class wrapper for GPM IMERGE files"""
+
+    SDTFORMAT = '%Y%m%dS%H%M%S'
+    EDTFORMAT = '%Y%m%dE%H%M%S'
+    
     def __init__(self, abspath):
         self.abspath = abspath
         self.basename = os.path.basename(abspath)
-        # 3B-HHR-E.MS.MRG.3IMERG.20170205-S043000-E045959.0270.V04A
-        self.start_date = None
-        self.start_time = None
-        self.stop_time = None
+        self.start_dt = None
+        self.end_dt = None
         self._precipCal = None
+        
+        self._set_datetimes()
 
     @property
     def precipCal(self):
@@ -23,3 +28,12 @@ class GPMImergeWrapper:
             f.close()
         return self._precipCal
 
+    def _set_datetimes(self):
+        datetimeinfo = self.basename.split('.')[4]
+        sdate, stime, etime = datetimeinfo.split('-')
+        naive_start_dt = datetime.datetime.strptime(sdate + stime,
+                                                    self.SDTFORMAT)
+        naive_end_dt = datetime.datetime.strptime(sdate + etime,
+                                                  self.EDTFORMAT)
+        self.start_dt = naive_start_dt.replace(tzinfo=datetime.timezone.utc)
+        self.end_dt = naive_end_dt.replace(tzinfo=datetime.timezone.utc)
