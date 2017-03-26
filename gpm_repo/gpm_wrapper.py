@@ -16,7 +16,7 @@ class GPMImergeWrapper:
 
     @property
     def precipCal(self):
-        if not self._precipCal:
+        if self._precipCal is None:
             f = h5py.File(self.abspath, 'r')
             ds = f['/Grid/precipitationCal']
             self._precipCal = ds[:]
