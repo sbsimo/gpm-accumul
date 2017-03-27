@@ -24,7 +24,9 @@ class GPMImergeWrapper:
         if self._precipCal is None:
             f = h5py.File(self.abspath, 'r')
             ds = f['/Grid/precipitationCal']
-            self._precipCal = ds[:]
+            # suggested way to retrieve the contents of a scalar dataset
+            # http://docs.h5py.org/en/latest/high/dataset.html
+            self._precipCal = ds[()]
             f.close()
         return self._precipCal
 
