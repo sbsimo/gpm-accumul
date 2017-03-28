@@ -14,22 +14,12 @@ class GPMFTP(FTP):
 
     def __init__(self):
         super().__init__(self.GPM_HOST, user, passwd)
+        self._latest_mod_dir = None
 
     @staticmethod
     def get_latest_fname():
         with GPMFTP() as ftp:
-            latst_modify = ''
-            dirname = None
-            for elm in ftp.mlsd(GPMFTP.HHR_E_dir, ['modify', 'type']):
-                if elm[1]['type'] != 'dir':
-                    continue
-                modify = elm[1]['modify']
-                if modify > latst_modify:
-                    latst_modify = modify
-                    dirname = elm[0]
-            print('Latest modified folder is', dirname, 'on', latst_modify)
-
-            absdirname = GPMFTP.HHR_E_dir + dirname
+            absdirname = ftp.HHR_E_dir + ftp.latest_mod_dir
             latest_fname = ''
             for elm in ftp.mlsd(absdirname, ['modify', 'type']):
                 if elm[1]['type'] != 'file':
@@ -40,16 +30,51 @@ class GPMFTP(FTP):
         print('Latest filename is', latest_fname)
         return latest_fname
 
-    def grab_file(self):
-        pass
+    @property
+    def latest_mod_dir(self):
+        if self._latest_mod_dir is None:
+            latst_modify = ''
+            dirname = None
 
-# https://pythonprogramming.net/ftp-transfers-python-ftplib/
-# def grabFile():
-#
-#     absfilename = os.path.join(local_datadir, filename)
-#     print(absfilename)
-#     with open(absfilename, 'wb') as localfile:
-#         ftp.retrbinary('RETR ' + remote_filename, localfile.write)
+            for elm in self.mlsd(self.HHR_E_dir, ['modify', 'type']):
+                if elm[1]['type'] != 'dir':
+                    continue
+                modify = elm[1]['modify']
+                if modify > latst_modify:
+                    latst_modify = modify
+                    dirname = elm[0]
+            print('Latest modified folder is', dirname, 'on', latst_modify)
+            self._latest_mod_dir = dirname
+        return self._latest_mod_dir
+
+    def get_latest_nfnames(self, n):
+        absdirname = self.HHR_E_dir + self.latest_mod_dir
+        fnames = []
+        for elm in self.mlsd(absdirname, ['type']):
+            if elm[1]['type'] != 'file':
+                continue
+            if elm[0].startswith('3B-HHR-E.MS.MRG.3IMERG.'):
+                fnames.append(absdirname + '/' + elm[0])
+        fnames.sort(reverse=True)
+        return fnames[:n]
+
+    def grab_file(self, path, datadir):
+        # https://pythonprogramming.net/ftp-transfers-python-ftplib/
+        fname = path.split('/')[-1]
+        absfname = os.path.join(datadir, fname)
+        if fname in os.listdir(datadir):
+            print('File', fname, 'already exists!')
+            return
+        with open(absfname, 'wb') as localfile:
+            print('Downloading', fname, '...')
+            ftp.retrbinary('RETR ' + path, localfile.write)
+            print('    ...downloaded')
+
+    def grab_latest_nfiles(self, n, datadir):
+        for path in self.get_latest_nfnames(n):
+            self.grab_file(path, datadir)
+
 
 if __name__ == '__main__':
-    GPMFTP.get_latest_fname()
+    with GPMFTP() as ftp:
+        ftp.grab_latest_nfiles(2, DATADIR)
