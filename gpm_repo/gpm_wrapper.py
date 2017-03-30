@@ -1,7 +1,17 @@
 import os
 import datetime
+import glob
 
 import h5py
+
+GPM_FFORMAT = '3B-HHR-E.MS.MRG.3IMERG.*.RT-H5'
+
+
+def get_gpms(datadir):
+    gpms = []
+    for gpm_abspath in glob.iglob(os.path.join(datadir, GPM_FFORMAT)):
+        gpms.append(os.path.basename(gpm_abspath))
+    return gpms
 
 
 class GPMImergeWrapper:

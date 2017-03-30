@@ -1,0 +1,1 @@
+this is the directory where gpm original data should be stored
