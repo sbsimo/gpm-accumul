@@ -1,5 +1,4 @@
 import os
-import glob
 import datetime
 from operator import attrgetter
 
@@ -20,9 +19,23 @@ class PrecipTimeSerie():
         self.exp_nmeas = self.duration // self.MEAS_DURATION
         self.measurements = []
         self.dt_index = None
-        self.serie = None
+        self._serie = None
+        self._accumul = None
 
-    def build_serie(self):
+    @property
+    def serie(self):
+        if self._serie is None:
+            self._build_serie()
+        return self._serie
+
+    @property
+    def accumul(self):
+        if self._accumul is None:
+            self._accumul = np.around(np.sum(
+                    self.serie, axis=0, keepdims=False) / 2, 0).astype(np.int16)
+        return self._accumul
+
+    def _build_serie(self):
         for meas_fname in gpm_wrapper.get_gpms(self.datadir):
             meas_abspath = os.path.join(self.datadir, meas_fname)
             gpm_meas = gpm_wrapper.GPMImergeWrapper(meas_abspath)
@@ -34,5 +47,7 @@ class PrecipTimeSerie():
         self.measurements.sort(key=attrgetter('start_dt'))
         self.dt_index = tuple(measure.start_dt for measure in
                               self.measurements)
-        self.serie = np.array([measure.precipCal for measure in self.measurements])
+        self._serie = np.array([measure.precipCal for measure
+                                in self.measurements])
         
+

@@ -36,7 +36,7 @@ class GPMImergeWrapper:
             ds = f['/Grid/precipitationCal']
             # suggested way to retrieve the contents of a scalar dataset
             # http://docs.h5py.org/en/latest/high/dataset.html
-            self._precipCal = ds[()]
+            self._precipCal = ds[:, 300:1500]
             f.close()
         return self._precipCal
 
