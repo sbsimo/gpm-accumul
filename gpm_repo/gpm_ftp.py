@@ -77,4 +77,4 @@ class GPMFTP(FTP):
 
 if __name__ == '__main__':
     with GPMFTP() as ftp:
-        ftp.grab_latest_nfiles(2, DATADIR)
+        ftp.grab_latest_nfiles(26, DATADIR)
