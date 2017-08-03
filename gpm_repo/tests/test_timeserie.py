@@ -2,10 +2,13 @@ import unittest
 import datetime
 import os
 
+import gdalconst
 import numpy as np
 
-from gpm_repo import time_serie, gpm_wrapper
-from gpm_repo.credentials import DATADIR
+from osgeo import gdal
+
+from .. import time_serie, gpm_wrapper
+from ..credentials import DATADIR
 
 
 class TestTimeSerie(unittest.TestCase):
@@ -28,3 +31,12 @@ class TestTimeSerie(unittest.TestCase):
         self.assertIsInstance(self.ts.accumul, np.ndarray)
         self.assertEqual(self.ts.accumul.shape[0], 3600)
         self.assertEqual(self.ts.accumul.dtype, np.int16)
+
+    def test_tiff(self):
+        tif_abspath = os.path.join(DATADIR, 'test.tif')
+        self.ts.save_accumul(tif_abspath)
+        self.assertTrue(os.path.exists(tif_abspath))
+
+        dataset = gdal.Open(tif_abspath, gdalconst.GA_ReadOnly)
+        self.assertIsNotNone(dataset)
+        dataset = None

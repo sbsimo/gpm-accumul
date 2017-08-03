@@ -4,7 +4,9 @@ from operator import attrgetter
 
 import numpy as np
 
-from gpm_repo import gpm_wrapper
+from . import gpm_wrapper
+from .utils import array2tiff
+
 
 class PrecipTimeSerie():
     """handle and manage a time serie of precipitation data"""
@@ -50,4 +52,5 @@ class PrecipTimeSerie():
         self._serie = np.array([measure.precipCal for measure
                                 in self.measurements])
         
-
+    def save_accumul(self, out_abspath):
+        array2tiff(self.accumul, out_abspath)

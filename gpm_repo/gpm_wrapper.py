@@ -34,10 +34,9 @@ class GPMImergeWrapper:
         if self._precipCal is None:
             f = h5py.File(self.abspath, 'r')
             ds = f['/Grid/precipitationCal']
-            # suggested way to retrieve the contents of a scalar dataset
-            # http://docs.h5py.org/en/latest/high/dataset.html
             self._precipCal = ds[:, 300:1500]
             f.close()
+            self._precipCal[self._precipCal == -9999.9] = 0
         return self._precipCal
 
     def _set_datetimes(self):
