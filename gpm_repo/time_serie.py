@@ -24,6 +24,16 @@ class PrecipTimeSerie():
         self._serie = None
         self._accumul = None
 
+    @classmethod
+    def latest(cls, duration, datadir):
+        gpm_files = gpm_wrapper.get_gpms(datadir)
+        gpm_files.sort()
+        end_absfile = os.path.join(datadir, gpm_files[-1])
+        end_gpmobj = gpm_wrapper.GPMImergeWrapper(end_absfile)
+        end_dt = end_gpmobj.end_dt
+        time_serie = cls(duration, end_dt, datadir)
+        return time_serie
+
     @property
     def serie(self):
         if self._serie is None:
