@@ -32,10 +32,12 @@ class GPMImergeWrapper:
     @property
     def precipCal(self):
         if self._precipCal is None:
-            f = h5py.File(self.abspath, 'r')
-            ds = f['/Grid/precipitationCal']
-            self._precipCal = ds[:, 300:1500]
-            f.close()
+            try:
+                with h5py.File(self.abspath, 'r') as f:
+                    ds = f['/Grid/precipitationCal']
+                    self._precipCal = ds[:, 300:1500]
+            except OSError as e:
+                print('Cannot read GPM file:', self.basename)
             self._precipCal[self._precipCal == -9999.9] = 0
         return self._precipCal
 

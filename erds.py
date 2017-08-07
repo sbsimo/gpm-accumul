@@ -12,12 +12,12 @@ from gpm_repo.time_serie import PrecipTimeSerie
 UPDATE_FILE = 'update.txt'
 UPDATE_ABSPATH = os.path.join(DATADIR, UPDATE_FILE)
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M%z'
+TIFF_FFORMAT = 'precip_{:03d}.tif'
 
 
 def mirror_gpm_site():
     # since the maximum cumulate is 144h, we need 288 files to build it
-    n_gpm_files = 28
-    # n_gpm_files = 288
+    n_gpm_files = 288
     with GPMFTP() as ftp:
         ftp.grab_latest_nfiles(n_gpm_files, DATADIR)
     # delete old files
@@ -37,7 +37,8 @@ def compare_dates():
             datetime_str = update_file.readline()
         erds_update = datetime.datetime.strptime(datetime_str, DATETIME_FORMAT)
     except FileNotFoundError:
-        erds_update = datetime.datetime.min
+        is_up_to_date = False
+        return is_up_to_date
     print('ERDS latest update is on: ', erds_update.isoformat())
 
     gpm_filelist = glob.glob(os.path.join(DATADIR, GPM_FFORMAT))
@@ -55,37 +56,40 @@ def compare_dates():
     return is_up_to_date
 
 
-def compare_precip():
+def compare_precip(hours):
     pass
 
 
-def cumulate():
-    TIFF_FFORMAT = 'precip_{:03d}.tif'
-
-    duration = datetime.timedelta(hours=12)
-    serie_012h = PrecipTimeSerie.latest(duration, DATADIR)
-
-    tif_abspath = os.path.join(DATADIR, TIFF_FFORMAT.format(12))
-    serie_012h.save_accumul(tif_abspath)
-
-    if serie_012h.measurements:
-        with open(UPDATE_ABSPATH, 'w') as update_file:
-            update_file.write('latest measure ended at:\n')
-            update_file.write(
-                serie_012h.measurements[-1].end_dt.strftime(DATETIME_FORMAT))
+def cumulate(hours):
+    duration = datetime.timedelta(hours=hours)
+    serie = PrecipTimeSerie.latest(duration, DATADIR)
+    tif_abspath = os.path.join(DATADIR, TIFF_FFORMAT.format(hours))
+    serie.save_accumul(tif_abspath)
+    return serie
 
 
 def generate_alerts():
-    cumulate()
-    compare_precip()
+    cumulate_hours = [12, 24, 48, 72, 96, 120, 144]
+    for hours in cumulate_hours:
+        print('Working on', str(hours), 'hours accumulation... ')
+        serie = cumulate(hours)
+        compare_precip(hours)
+
+    if serie.measurements:
+        with open(UPDATE_ABSPATH, 'w') as update_file:
+            update_file.write('latest measure ended at:\n')
+            update_file.write(
+                serie.measurements[-1].end_dt.strftime(DATETIME_FORMAT))
 
 
 def start():
     mirror_gpm_site()
     is_up_to_date = compare_dates()
     if not is_up_to_date:
-        print('Updating ERDS...')
+        print('Updating ERDS -', 'start time:',
+              datetime.datetime.utcnow().isoformat())
         generate_alerts()
+        print('Stop time:', datetime.datetime.utcnow().isoformat())
 
 
 if __name__ == '__main__':

@@ -71,7 +71,10 @@ class GPMFTP(FTP):
             print('    ...downloaded')
 
     def grab_latest_nfiles(self, n, datadir):
+        count = 0
         for path in self.get_latest_nfnames(n):
+            count += 1
+            print('GPM file number ' + str(count) + '/' + str(n))
             self.grab_file(path, datadir)
 
 
