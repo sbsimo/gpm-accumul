@@ -2,4 +2,5 @@
 .idea
 __pycache__
 *.RT-H5
-data
+gpm_data
+thresholds.ini

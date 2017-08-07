@@ -30,6 +30,12 @@ def array2tiff(array, out_abspath):
     outDataset = None
 
 
+def tiff2array(tif_abspath):
+    ds = gdal.Open(tif_abspath, gdal.GA_ReadOnly)
+    array = ds.GetRasterBand(1).ReadAsArray()
+    return array
+
+
 def get_gpm_lats(h5abspath):
     f = h5py.File(h5abspath, 'r')
     ds = f['/Grid/lat']
