@@ -2,7 +2,7 @@ import os
 from ftplib import FTP
 
 try:
-    from credentials import *
+    from .credentials import *
 except ImportError:
     print('You must define a user and a password')
 
@@ -67,7 +67,7 @@ class GPMFTP(FTP):
             return
         with open(absfname, 'wb') as localfile:
             print('Downloading', fname, '...')
-            ftp.retrbinary('RETR ' + path, localfile.write)
+            self.retrbinary('RETR ' + path, localfile.write)
             print('    ...downloaded')
 
     def grab_latest_nfiles(self, n, datadir):

@@ -55,7 +55,7 @@ class PrecipTimeSerie():
                             gpm_meas.end_dt > self.start_dt:
                 self.measurements.append(gpm_meas)
         if len(self.measurements) != self.exp_nmeas:
-            raise ValueError
+            raise ValueError("Missing measurements in the serie")
         self.measurements.sort(key=attrgetter('start_dt'))
         self.dt_index = tuple(measure.start_dt for measure in
                               self.measurements)
