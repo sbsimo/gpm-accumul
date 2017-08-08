@@ -6,7 +6,7 @@ from gpm_repo import gpm_wrapper
 from gpm_repo.credentials import DATADIR
 from gpm_repo.gpm_ftp import GPMFTP
 from gpm_repo.gpm_wrapper import GPM_FFORMAT
-from gpm_repo.time_serie import PrecipTimeSerie
+from gpm_repo.time_serie import PrecipTimeSerie, AlertDetector
 
 
 UPDATE_FILE = 'update.txt'
@@ -56,8 +56,9 @@ def compare_dates():
     return is_up_to_date
 
 
-def compare_precip(hours):
-    pass
+def compare_precip(serie):
+    alert_detect = AlertDetector(serie)
+    alert_detect.save_alerts(DATADIR)
 
 
 def cumulate(hours):
@@ -73,7 +74,7 @@ def generate_alerts():
     for hours in cumulate_hours:
         print('Working on', str(hours), 'hours accumulation... ')
         serie = cumulate(hours)
-        compare_precip(hours)
+        compare_precip(serie)
 
     if serie.measurements:
         with open(UPDATE_ABSPATH, 'w') as update_file:

@@ -87,7 +87,7 @@ class Threshold:
     @property
     def adj_array(self):
         if self._adj_array is None:
-            self._adj_array = tiff2array(THRESH_ADJ_ABSPATH).T
+            self._adj_array = np.fliplr(tiff2array(THRESH_ADJ_ABSPATH).T)
         return self._adj_array
 
     @property
@@ -107,6 +107,9 @@ class Threshold:
         if self._high_threshold is None:
             self._high_threshold = self.high_scalar * self.adj_array
         return self._high_threshold
+
+    def save_high(self, out_abspath):
+        array2tiff(self.high, out_abspath)
 
 
 class AlertDetector:
