@@ -12,7 +12,7 @@ from gpm_repo.time_serie import PrecipTimeSerie
 UPDATE_FILE = 'update.txt'
 UPDATE_ABSPATH = os.path.join(DATADIR, UPDATE_FILE)
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M%z'
-TIFF_FFORMAT = 'precip_{:03d}.tif'
+TIFF_FFORMAT = 'precip_{:03d}h.tif'
 
 
 def mirror_gpm_site():

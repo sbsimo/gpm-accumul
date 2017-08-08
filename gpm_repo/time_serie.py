@@ -1,14 +1,16 @@
 import os
 import datetime
 from operator import attrgetter
+import configparser
 
 import numpy as np
 
 from . import gpm_wrapper
-from .utils import array2tiff
+from .utils import array2tiff, tiff2array
+from .credentials import THRESH_ADJ_ABSPATH, THRESHOLDS_ABSPATH
 
 
-class PrecipTimeSerie():
+class PrecipTimeSerie:
     """handle and manage a time serie of precipitation data"""
 
     MEAS_DURATION = datetime.timedelta(minutes=30)
@@ -64,3 +66,73 @@ class PrecipTimeSerie():
         
     def save_accumul(self, out_abspath):
         array2tiff(self.accumul, out_abspath)
+
+
+class Threshold:
+    def __init__(self, hours):
+        if not isinstance(hours, int):
+            raise ValueError
+        self.hours = hours
+        self._low_threshold = None
+        self._medium_threshold = None
+        self._high_threshold = None
+        self._adj_array = None
+        self.config = configparser.ConfigParser()
+        self.config.read(THRESHOLDS_ABSPATH)
+        self.section = str(hours) + ' Hours'
+        self.low_scalar = int(self.config[self.section]['low'])
+        self.medium_scalar = int(self.config[self.section]['medium'])
+        self.high_scalar = int(self.config[self.section]['high'])
+
+    @property
+    def adj_array(self):
+        if self._adj_array is None:
+            self._adj_array = tiff2array(THRESH_ADJ_ABSPATH).T
+        return self._adj_array
+
+    @property
+    def low(self):
+        if self._low_threshold is None:
+            self._low_threshold = self.low_scalar * self.adj_array
+        return self._low_threshold
+
+    @property
+    def medium(self):
+        if self._medium_threshold is None:
+            self._medium_threshold = self.medium_scalar * self.adj_array
+        return self._medium_threshold
+
+    @property
+    def high(self):
+        if self._high_threshold is None:
+            self._high_threshold = self.high_scalar * self.adj_array
+        return self._high_threshold
+
+
+class AlertDetector:
+    TIF_BASENAME = 'alerts_{:03d}h.tif'
+
+    def __init__(self, serie):
+        if not isinstance(serie, PrecipTimeSerie):
+            raise ValueError
+        self.serie = serie
+        self.hours = int(serie.duration.total_seconds() // 3600)
+        self.threshold_obj = Threshold(self.hours)
+        self.total_alerts = None
+
+    def detect_alerts(self):
+        alerts_low = (self.serie.accumul >
+                      self.threshold_obj.low).astype(np.int16)
+        alerts_medium = (self.serie.accumul >
+                         self.threshold_obj.medium).astype(np.int16)
+        alerts_high = (self.serie.accumul >
+                       self.threshold_obj.high).astype(np.int16)
+        self.total_alerts = alerts_low + alerts_medium + alerts_high
+        return self.total_alerts
+
+    def save_alerts(self, out_dir):
+        if self.total_alerts is None:
+            self.detect_alerts()
+        tif_basename = self.TIF_BASENAME.format(self.hours)
+        tif_abspath = os.path.join(out_dir, tif_basename)
+        array2tiff(self.total_alerts, tif_abspath)
