@@ -4,3 +4,5 @@ __pycache__
 *.RT-H5
 gpm_data
 thresholds.ini
+tool_data
+prova_*
