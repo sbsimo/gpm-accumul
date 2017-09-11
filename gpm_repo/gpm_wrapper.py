@@ -25,21 +25,21 @@ class GPMImergeWrapper:
         self.basename = os.path.basename(abspath)
         self.start_dt = None
         self.end_dt = None
-        self._precipCal = None
-        
+
         self._set_datetimes()
 
     @property
     def precipCal(self):
-        if self._precipCal is None:
-            try:
-                with h5py.File(self.abspath, 'r') as f:
-                    ds = f['/Grid/precipitationCal']
-                    self._precipCal = ds[:, 300:1500]
-            except OSError as e:
-                print('Cannot read GPM file:', self.basename)
-            self._precipCal[self._precipCal == -9999.9] = 0
-        return self._precipCal
+        _precipCal = None
+        try:
+            with h5py.File(self.abspath, 'r') as f:
+                ds = f['/Grid/precipitationCal']
+                _precipCal = ds[:, 300:1500]
+        except OSError as e:
+            print('Cannot read GPM file:', self.basename)
+
+        _precipCal[_precipCal == -9999.9] = 0
+        return _precipCal
 
     def _set_datetimes(self):
         datetimeinfo = self.basename.split('.')[4]
