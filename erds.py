@@ -71,9 +71,20 @@ def cumulate(hours):
 
 def generate_alerts():
     cumulate_hours = [12, 24, 48, 72, 96, 120, 144]
-    for hours in cumulate_hours:
+    cumulate_hours.sort(reverse=True)
+
+    # the first serie is built from scratch
+    hours = cumulate_hours[0]
+    print('Working on', str(hours), 'hours accumulation... ')
+    serie = cumulate(hours)
+    compare_precip(serie)
+    # the other series are subserie of the previous
+    for hours in cumulate_hours[1:]:
         print('Working on', str(hours), 'hours accumulation... ')
-        serie = cumulate(hours)
+        duration = datetime.timedelta(hours=hours)
+        serie = serie.latest_subserie(duration)
+        tif_abspath = os.path.join(DATADIR, TIFF_FFORMAT.format(hours))
+        serie.save_accumul(tif_abspath)
         compare_precip(serie)
 
     if serie.measurements:

@@ -67,6 +67,22 @@ class PrecipTimeSerie:
     def save_accumul(self, out_abspath):
         array2tiff(self.accumul, out_abspath)
 
+    def latest_subserie(self, duration):
+        if self._serie is None:
+            raise ValueError('No need to create a subserie from a'
+                             ' non-built serie')
+
+        if duration >= self.duration:
+            raise ValueError('Required duration of subserie is greater '
+                             'than original serie')
+
+        subserie = PrecipTimeSerie(duration, self.end_dt, self.datadir)
+        n_throw = self.exp_nmeas - subserie.exp_nmeas
+        subserie.measurements = self.measurements[n_throw:]
+        subserie.dt_index = self.dt_index[n_throw:]
+        subserie._serie = self.serie[n_throw:]
+        return subserie
+
 
 class Threshold:
     def __init__(self, hours):
