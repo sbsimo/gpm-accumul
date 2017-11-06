@@ -1,6 +1,8 @@
 import os
 from ftplib import FTP
 
+from .gpm_wrapper import GPM_FFORMAT
+
 try:
     from .credentials import *
 except ImportError:
@@ -15,6 +17,7 @@ class GPMFTP(FTP):
     def __init__(self):
         super().__init__(self.GPM_HOST, user, passwd)
         self._latest_mod_dir = None
+        self._2latest_mod_dir = None
 
     @staticmethod
     def get_latest_fname():
@@ -47,14 +50,37 @@ class GPMFTP(FTP):
             self._latest_mod_dir = dirname
         return self._latest_mod_dir
 
+    @property
+    def second_latest_mdir(self):
+        if self._2latest_mod_dir is None:
+            dirs = []  # should be filled with tuples like so [(dirname, modify_timestamp),
+                       # (dirname2, modify_timestamp2)]
+            for elm in self.mlsd(self.HHR_E_dir, ['modify', 'type']):
+                if elm[1]['type'] != 'dir':
+                    continue
+                dirs.append((elm[0], elm[1]['modify']))
+            dirs.sort(key=lambda dir: dir[1])
+            self._2latest_mod_dir = dirs[-2][0]
+            print('Second latest modified folder is', self._2latest_mod_dir, 'on', dirs[-2][1])
+        return self._2latest_mod_dir
+
     def get_latest_nfnames(self, n):
+        gpm_prefix = GPM_FFORMAT[:-7]
         absdirname = self.HHR_E_dir + self.latest_mod_dir
         fnames = []
         for elm in self.mlsd(absdirname, ['type']):
             if elm[1]['type'] != 'file':
                 continue
-            if elm[0].startswith('3B-HHR-E.MS.MRG.3IMERG.'):
+            if elm[0].startswith(gpm_prefix):
                 fnames.append(absdirname + '/' + elm[0])
+
+        if len(fnames) < n:
+            absdirname = self.HHR_E_dir + self.second_latest_mdir
+            for elm in self.mlsd(absdirname, ['type']):
+                if elm[1]['type'] != 'file':
+                    continue
+                if elm[0].startswith(gpm_prefix):
+                    fnames.append(absdirname + '/' + elm[0])
         fnames.sort(reverse=True)
         return fnames[:n]
 

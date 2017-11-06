@@ -17,11 +17,13 @@ TIFF_FFORMAT = 'precip_{:03d}h.tif'
 
 def mirror_gpm_site():
     # since the maximum cumulate is 144h, we need 288 files to build it
+    print('Mirroring FTP site')
     n_gpm_files = 288
     with GPMFTP() as ftp:
         ftp.grab_latest_nfiles(n_gpm_files, DATADIR)
     # delete old files
     gpm_filelist = glob.glob(os.path.join(DATADIR, GPM_FFORMAT))
+    gpm_filelist.sort()
     if len(gpm_filelist) > n_gpm_files:
         for gpm_file in gpm_filelist[: -n_gpm_files]:
             try:
@@ -42,6 +44,7 @@ def compare_dates():
     print('ERDS latest update is on: ', erds_update.isoformat())
 
     gpm_filelist = glob.glob(os.path.join(DATADIR, GPM_FFORMAT))
+    gpm_filelist.sort()
     latest_gpm_obj = gpm_wrapper.GPMImergeWrapper(gpm_filelist[-1])
     gpmfiles_update = latest_gpm_obj.end_dt
     print('GPM latest file ends on: ', gpmfiles_update.isoformat())
