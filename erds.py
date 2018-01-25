@@ -61,7 +61,7 @@ def compare_dates():
 
 def compare_precip(serie):
     alert_detect = AlertDetector(serie)
-    alert_detect.save_alerts(DATADIR)
+    alert_detect.save_masked_alerts(DATADIR)
 
 
 def cumulate(hours):

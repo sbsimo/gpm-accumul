@@ -149,9 +149,29 @@ class AlertDetector:
         self.total_alerts = alerts_low + alerts_medium + alerts_high
         return self.total_alerts
 
+    def get_masked_alerts(self):
+        alerts = self.detect_alerts()
+        mask = self.get_mask()
+        return alerts * mask
+
     def save_alerts(self, out_dir):
         if self.total_alerts is None:
             self.detect_alerts()
         tif_basename = self.TIF_BASENAME.format(self.hours)
         tif_abspath = os.path.join(out_dir, tif_basename)
         array2tiff(self.total_alerts, tif_abspath)
+
+    def save_masked_alerts(self, out_dir):
+        tif_basename = self.TIF_BASENAME.format(self.hours)
+        tif_abspath = os.path.join(out_dir, tif_basename)
+        array2tiff(self.get_masked_alerts(), tif_abspath)
+
+    def get_mask(self):
+        config = configparser.ConfigParser()
+        config.read(THRESHOLDS_ABSPATH)
+        mask_filename = config['Files']['mask']
+        mask_dirname = os.path.dirname(THRESHOLDS_ABSPATH)
+        mask_abspath = os.path.join(mask_dirname, mask_filename)
+        global_mask = tiff2array(mask_abspath)
+        gpm_mask = global_mask[300:-300, :]
+        return np.fliplr(gpm_mask.T)
