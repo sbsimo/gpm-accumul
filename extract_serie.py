@@ -14,7 +14,7 @@ ALERT_ABSPATH = r"G:\progetti\ITHACA\tribute\gpm-accumul\data\gpm_data\alerts_04
 def extract_serie():
 
     # read alerts
-    alerts = np.fliplr(tiff2array(ALERT_ABSPATH).T)
+    alerts = tiff2array(ALERT_ABSPATH).T
 
     print(alerts.shape)
 
