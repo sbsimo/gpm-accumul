@@ -6,7 +6,7 @@ import numpy as np
 TEST_FILEPATH = r'G:\progetti\ITHACA\tribute\gpm-accumul\data\gpm_data\sample_rainoi.hdf5'
 
 
-def get_rain(lon, lat, duration):
+def get_rain_serie(lon, lat, duration):
     lon_index = get_lon_index(lon)
     lat_index = get_lat_index(lat)
 
@@ -16,7 +16,7 @@ def get_rain(lon, lat, duration):
     delta_meas = datetime.timedelta(minutes=30)
     nof_values = int(delta_dur / delta_meas)
 
-    return read_values(TEST_FILEPATH, loc_index, nof_values)
+    return read_rain_values(TEST_FILEPATH, loc_index, nof_values)
 
 
 def get_lon_index(lon):
@@ -33,17 +33,26 @@ def get_lat_index(lat):
     return abs_diffs.argmin()
 
 
-def read_values(filepath, loc_index, nof_values):
+def read_rain_values(filepath, loc_index, nof_values):
     f = h5py.File(filepath, 'r')
+    true_array = np.nonzero(f['location'][:] == loc_index)[0]
+    if true_array.shape[0] != 1:
+        f.close()
+        raise ValueError('The selected location was not alerted')
     start = f['rain'].shape[0] - nof_values
-    hrain = f['rain'][start:, f['location'] == loc_index]
+    hrain = f['rain'][start:, true_array[0]]
     f.close()
     return hrain / 2
     
 
 if __name__ == '__main__':
-    rain = get_rain(45.3, 8.03, 12)
-    print(type(rain))
+    lon = -121.94
+    lat = 47.66
+    hour = 24
+    rain = get_rain_serie(lon, lat, hour)
     print(rain.shape)
-    print(rain.size)
-    print(rain)
+    print(rain.dtype)
+
+    # should fail
+    lat = 25.98
+    rain = get_rain_serie(lon, lat, hour)
