@@ -146,7 +146,8 @@ class GridThreshold:
     @property
     def grid(self):
         if self._grid is None:
-            self._grid = tiff2array(self.grid_apath)[300:-300].T
+            grid_toflip = tiff2array(self.grid_apath)[300:-300].T
+            self._grid = np.fliplr(grid_toflip)
         return self._grid
 
 
