@@ -146,7 +146,7 @@ class GridThreshold:
     @property
     def grid(self):
         if self._grid is None:
-            self._grid = tiff2array(self.grid_apath)[300, -300].T
+            self._grid = tiff2array(self.grid_apath)[300:-300].T
         return self._grid
 
 
