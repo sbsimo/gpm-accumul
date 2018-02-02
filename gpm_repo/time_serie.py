@@ -128,6 +128,28 @@ class Threshold:
         array2tiff(self.high, out_abspath)
 
 
+class GridThreshold:
+    SECTION = 'Grid Thresholds'
+
+    def __init__(self, hours):
+        if not isinstance(hours, int):
+            raise ValueError('Duration must be expressed in hours, integer value is expected')
+        self.hours = hours
+        self._grid = None
+        config = configparser.ConfigParser()
+        config.read(THRESHOLDS_ABSPATH)
+        self.ref = '{:03d}h'.format(hours)
+        self.grid_fname = config[self.SECTION][self.ref]
+        self.grid_apath = os.path.join(os.path.dirname(THRESHOLDS_ABSPATH), self.grid_fname)
+        del config
+
+    @property
+    def grid(self):
+        if self._grid is None:
+            self._grid = tiff2array(self.grid_apath)[300, -300].T
+        return self._grid
+
+
 class AlertDetector:
     TIF_BASENAME = 'alerts_{:03d}h.tif'
 
@@ -136,10 +158,18 @@ class AlertDetector:
             raise ValueError
         self.serie = serie
         self.hours = int(serie.duration.total_seconds() // 3600)
-        self.threshold_obj = Threshold(self.hours)
+        try:
+            self.threshold_obj = GridThreshold(self.hours)
+        except:
+            print('Grid threshold not available for {:3d} hours duration'.format(self.hours))
+            self.threshold_obj = Threshold(self.hours)
         self.total_alerts = None
 
     def detect_alerts(self):
+        if isinstance(self.threshold_obj, GridThreshold):
+            self.total_alerts = (self.serie.accumul > self.threshold_obj.grid).astype(np.int16)
+            return self.total_alerts
+
         alerts_low = (self.serie.accumul >
                       self.threshold_obj.low).astype(np.int16)
         alerts_medium = (self.serie.accumul >
