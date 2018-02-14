@@ -6,6 +6,6 @@ def index(request):
     return HttpResponse("Hello, precipitation time serie will be available through thiss app!")
 
 
-def time_series(request, gibbone):
-    print(gibbone)
+def time_series(request, lon, lat, time_period_hours):
+    print(lon)
     return HttpResponse("Hello, precipitation time serie will be available through thiss app!")

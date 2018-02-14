@@ -6,5 +6,5 @@ app_name = 'gpm'
 
 urlpatterns = [
     path('', views.index, name='index'),
-    re_path(r'^(?P<gibbone>\w+)/$', views.time_series, name='time_series')
+    re_path(r'^time_series/(?P<lon>\w+)/$', views.time_series, name='time_series')
 ]
