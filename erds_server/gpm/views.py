@@ -1,4 +1,7 @@
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.http import (HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseServerError,
+                         HttpResponseNotFound)
+
+from gpm_repo.rain_chart import PrecipCalReader
 
 
 def index(request):
@@ -6,10 +9,6 @@ def index(request):
 
 
 def time_series(request, lon, lat, time_period_hours):
-    print(lon)
-    print(lat)
-    print(time_period_hours)
-
     lon_f = float(lon)
     if lon_f < -180 or lon_f > 180:
         return HttpResponseBadRequest('Longitude value {} is not in the valid range -180 --> 180'.format(lon))
@@ -20,4 +19,15 @@ def time_series(request, lon, lat, time_period_hours):
 
     hours = int(time_period_hours)
 
-    return JsonResponse({'precipitation in mm': [34.5, 89.3, 23.8, lon_f, lat_f, hours]})
+    try:
+        pcr_obj = PrecipCalReader.get_latest()
+    except Exception as e:
+        return HttpResponseServerError(e.message)
+
+    try:
+        rain_data = pcr_obj.get_rain_series(lon_f, lat_f, hours)
+    except Exception as e:
+        return HttpResponseNotFound('{0} --> Lon: {1} | Lat: {2}'.format(str(e), lon, lat))
+
+    rain_data_list = rain_data.tolist()
+    return JsonResponse({'precipitation in mm': rain_data_list})
