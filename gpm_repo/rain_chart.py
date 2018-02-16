@@ -1,58 +1,70 @@
 import datetime
+import os
+import glob
 
 import h5py
 import numpy as np
 
-TEST_FILEPATH = r'G:\progetti\ITHACA\tribute\gpm-accumul\data\gpm_data\sample_rainoi.hdf5'
+from .gpm_wrapper import GPMImergeWrapper
+from .credentials import DATADIR
 
 
-def get_rain_serie(lon, lat, duration):
-    lon_index = get_lon_index(lon)
-    lat_index = get_lat_index(lat)
+class PrecipCalReader:
+    PRECIPCAL_FFORMAT = r'precipitationCal_{0}_E{1}.hdf5'
+    DT_FORMAT = PRECIPCAL_FFORMAT[:17] + '%Y%m%d_E%H%M.hdf5'
 
-    loc_index = lon_index * 10000 + lat_index
+    @classmethod
+    def get_latest_precip_file(cls):
+        fname_format = cls.PRECIPCAL_FFORMAT.format('*', '*')
+        fabspath_format = os.path.join(DATADIR, fname_format)
+        candidates = glob.glob(fabspath_format)
+        if len(candidates) > 1:
+            raise RuntimeError('More than one precipitationCal file is stored in the datadir. There must be only one')
+        return candidates[0]
 
-    delta_dur = datetime.timedelta(hours=duration)
-    delta_meas = datetime.timedelta(minutes=30)
-    nof_values = int(delta_dur / delta_meas)
+    @classmethod
+    def get_latest(cls):
+        return cls(cls.get_latest_precip_file())
 
-    return read_rain_values(TEST_FILEPATH, loc_index, nof_values)
+    def __init__(self, precip_cal_abspath):
+        self.precip_cal_abspath = precip_cal_abspath
+        self.precip_cal_fname = os.path.basename(precip_cal_abspath)
+        self.end_dt = datetime.datetime.strptime(self.precip_cal_fname, self.DT_FORMAT)
 
+    def get_rain_series(self, lon, lat, duration):
+        lon_index = GPMImergeWrapper.get_lon_index(lon)
+        lat_index = GPMImergeWrapper.get_lat_index(lat)
 
-def get_lon_index(lon):
-    lons = np.arange(-179.95, 180, 0.1)
-    diffs = lon - lons
-    abs_diffs = np.absolute(diffs)
-    return abs_diffs.argmin()
-    
+        loc_index = lon_index * 10000 + lat_index
 
-def get_lat_index(lat):
-    lats = np.arange(-59.95, 60, 0.1)
-    diffs = lat - lats
-    abs_diffs = np.absolute(diffs)
-    return abs_diffs.argmin()
+        delta_dur = datetime.timedelta(hours=duration)
+        delta_meas = datetime.timedelta(minutes=30)
+        nof_values = int(delta_dur / delta_meas)
 
+        return self.read_rain_values(loc_index, nof_values)
 
-def read_rain_values(filepath, loc_index, nof_values):
-    f = h5py.File(filepath, 'r')
-    true_array = np.nonzero(f['location'][:] == loc_index)[0]
-    if true_array.shape[0] != 1:
+    def read_rain_values(self, loc_index, nof_values):
+        f = h5py.File(self.precip_cal_abspath, 'r')
+        true_array = np.nonzero(f['location'][:] == loc_index)[0]
+        if true_array.shape[0] != 1:
+            f.close()
+            raise ValueError('The selected location was not alerted')
+        start = f['rain'].shape[0] - nof_values
+        hrain = f['rain'][start:, true_array[0]]
         f.close()
-        raise ValueError('The selected location was not alerted')
-    start = f['rain'].shape[0] - nof_values
-    hrain = f['rain'][start:, true_array[0]]
-    f.close()
-    return hrain / 2
-    
+        return hrain / 2
+
 
 if __name__ == '__main__':
     lon = -121.94
     lat = 47.66
     hour = 24
-    rain = get_rain_serie(lon, lat, hour)
+
+    pcr = PrecipCalReader.get_latest()
+    rain = pcr.get_rain_series(lon, lat, hour)
     print(rain.shape)
     print(rain.dtype)
 
     # should fail
     lat = 25.98
-    rain = get_rain_serie(lon, lat, hour)
+    rain = pcr.get_rain_series(lon, lat, hour)
