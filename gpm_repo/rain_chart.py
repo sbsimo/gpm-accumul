@@ -1,12 +1,94 @@
 import datetime
 import os
 import glob
+import re
 
 import h5py
 import numpy as np
 
+from gpm_repo import utils
 from .gpm_wrapper import GPMImergeWrapper
+from .time_serie import AlertDetector
 from .credentials import DATADIR
+
+
+class PrecipCalBuilder:
+    def __init__(self, serie_obj):
+        self.serie_obj = serie_obj
+        self._precip_cal = None
+        self._alert_locations = None
+        self._alerts_abspaths = []
+        self._combined_alerts = None
+
+    @property
+    def precip_cal(self):
+        if self._precip_cal is None:
+            self.filter_serie()
+        return self._precip_cal
+
+    @property
+    def alert_locations(self):
+        if self._alert_locations is None:
+            self.filter_serie()
+        return self._alert_locations
+
+    @property
+    def alerts_abspaths(self):
+        if not self._alerts_abspaths:
+            return self.filter_abspaths()
+        return self._alerts_abspaths
+
+    @property
+    def combined_alerts(self):
+        if self._combined_alerts is None:
+            return self.combine_alerts()
+        return self._combined_alerts
+
+    def combine_alerts(self):
+        combined_alerts = 0
+        for abspath in self.alerts_abspaths:
+            combined_alerts = combined_alerts + utils.tiff2array(abspath)
+        self._combined_alerts = combined_alerts.T
+        return self._combined_alerts
+
+    def filter_abspaths(self):
+        duration_pattern = AlertDetector.TIF_BASENAME.replace('{:03d}', '(?P<hours>\d{3,3})')
+        hours_re = re.compile(duration_pattern)
+        alerts_basename = AlertDetector.TIF_BASENAME.replace('{:03d}', '*')
+        alerts_abspath = os.path.join(DATADIR, alerts_basename)
+
+        filtered_abspath = []
+        for alerts_apath in glob.glob(alerts_abspath):
+            m = hours_re.search(alerts_apath)
+            hours = int(m.group('hours'))
+            if datetime.timedelta(hours=hours) <= self.serie_obj.duration:
+                filtered_abspath.append(alerts_apath)
+
+        self._alerts_abspaths = filtered_abspath
+        return self._alerts_abspaths
+
+    def filter_serie(self):
+        alert_indexes = self.combined_alerts.nonzero()
+        all_rain_data = self.serie_obj.serie
+        rainoi = all_rain_data[:, alert_indexes[0], alert_indexes[1]]
+        alert_locations = alert_indexes[0] * 10000 + alert_indexes[1]
+        self._precip_cal = rainoi
+        self._alert_locations = alert_locations
+        return rainoi, alert_locations
+
+    def store_series(self, out_dir=None):
+        if out_dir is None:
+            out_dir = DATADIR
+
+        date_str = self.serie_obj.end_dt.strftime('%Y%m%d')
+        time_str = self.serie_obj.end_dt.strftime('%H%M')
+        abs_path = os.path.join(out_dir, PrecipCalReader.PRECIPCAL_FFORMAT.format(date_str, time_str))
+
+        f = h5py.File(abs_path, 'w')
+        f.create_dataset('location', data=self.alert_locations)
+        f.create_dataset('rain', data=self.precip_cal)
+        f.close()
+        return abs_path
 
 
 class PrecipCalReader:
