@@ -7,6 +7,7 @@ from gpm_repo.credentials import DATADIR
 from gpm_repo.gpm_ftp import GPMFTP
 from gpm_repo.gpm_wrapper import GPM_FFORMAT
 from gpm_repo.time_serie import PrecipTimeSerie, AlertDetector
+from gpm_repo.rain_chart import PrecipCalBuilder
 
 
 UPDATE_FILE = 'update.txt'
@@ -82,6 +83,7 @@ def generate_alerts():
     serie = cumulate(hours)
     compare_precip(serie)
     # the other series are subserie of the previous
+    serie_72h = None
     for hours in cumulate_hours[1:]:
         print('Working on', str(hours), 'hours accumulation... ')
         duration = datetime.timedelta(hours=hours)
@@ -89,7 +91,15 @@ def generate_alerts():
         tif_abspath = os.path.join(DATADIR, TIFF_FFORMAT.format(hours))
         serie.save_accumul(tif_abspath)
         compare_precip(serie)
+        if hours == 72:
+            serie_72h = serie
 
+    # filter precipitation on the basis of the alerts
+    pcb = PrecipCalBuilder(serie_72h)
+    pcb.store_series()
+    pcb.delete_old()
+
+    # write update file
     if serie.measurements:
         with open(UPDATE_ABSPATH, 'w') as update_file:
             update_file.write('latest measure ended at:\n')
@@ -104,7 +114,7 @@ def start():
         print('Updating ERDS -', 'start time:',
               datetime.datetime.utcnow().isoformat())
         generate_alerts()
-        print('Stop time:', datetime.datetime.utcnow().isoformat())
+    print('Stop time:', datetime.datetime.utcnow().isoformat())
 
 
 if __name__ == '__main__':
