@@ -13,6 +13,17 @@ from .credentials import DATADIR
 
 
 class PrecipCalBuilder:
+
+    @staticmethod
+    def delete_old():
+        fname_format = PrecipCalReader.PRECIPCAL_FFORMAT.format('*', '*')
+        fabspath_format = os.path.join(DATADIR, fname_format)
+        candidates = glob.glob(fabspath_format)
+        candidates.sort()
+        for abspath in candidates[:-1]:
+            print('Removing old precipCal hdf5 file: ' + abspath)
+            os.remove(abspath)
+
     def __init__(self, serie_obj):
         self.serie_obj = serie_obj
         self._precip_cal = None
@@ -88,6 +99,7 @@ class PrecipCalBuilder:
         f.create_dataset('location', data=self.alert_locations)
         f.create_dataset('rain', data=self.precip_cal)
         f.close()
+        print('PrecipitationCal hdf5 file was written: ' + abs_path)
         return abs_path
 
 
