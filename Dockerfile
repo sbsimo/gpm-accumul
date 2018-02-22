@@ -1,14 +1,20 @@
-FROM python:3
+FROM ubuntu:xenial
 
-WORKDIR /usr/src
+RUN apt update
+RUN apt install -y software-properties-common python-software-properties
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN add-apt-repository -y ppa:ubuntugis/ppa
+RUN apt update
+RUN apt install -y gdal-bin python3-gdal libgdal-dev
+
+RUN apt install -y python3-pip
+RUN pip3 install h5py
+RUN pip3 install Django==2
 
 VOLUME /usr/src/gpm-accumul
 
-WORKDIR gpm-accumul/erds_server
+WORKDIR /usr/src
 
 EXPOSE 8000
 
-CMD ["python3", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD bash
